@@ -1,3 +1,7 @@
+[![Action Status](https://github.com/swiftcoder/auth_for_warp/workflows/Continuous%20integration/badge.svg)](https://github.com/swiftcoder/auth_for_warp/actions)
+[![Crates.io](https://img.shields.io/crates/v/auth_for_warp.svg)](https://crates.io/crates/auth_for_warp)
+[![Docs.rs](https://docs.rs/auth_for_warp/badge.svg)](https://docs.rs/auth_for_warp)
+
 # auth_for_warp
 
 A proof-of-concept for a simple and reusable auth module that can be plugged into any [warp](https://crates.io/crates/warp)-based server application.
