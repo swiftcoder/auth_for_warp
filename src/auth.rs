@@ -88,7 +88,7 @@ impl AuthInternal {
         validation.set_issuer(&[&self.config.auth_token_issuer]);
 
         let token = decode::<Claims>(
-            &token,
+            token,
             &DecodingKey::from_secret(self.config.auth_token_secret.as_ref()),
             &validation,
         )?;
@@ -122,7 +122,7 @@ impl AuthInternal {
             .database_connection
             .lock()
             .await
-            .retreive_user(&username)
+            .retreive_user(username)
             .await?;
 
         Ok((user_id, hashed_password))

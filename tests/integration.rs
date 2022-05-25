@@ -42,7 +42,7 @@ impl UserDatabase for TestDB {
         let result = self
             .storage
             .get(&username.0)
-            .ok_or(anyhow!("user not found"))
+            .ok_or_else(|| anyhow!("user not found"))
             .cloned()?;
 
         Ok(result)
