@@ -1,6 +1,6 @@
 [package]
 name = "auth_for_warp"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "Apache-2.0"
 description = "plugin auth module for warp-based servers"
@@ -20,3 +20,4 @@ jsonwebtoken = { version = "8.1", default-features = false }
 [dev-dependencies]
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["json"] }
+tokio-stream = { version = "0.1", features = ["net"] }
