@@ -1,4 +1,10 @@
-use std::{collections::HashMap, error::Error, net::SocketAddr, sync::Arc, time::Duration};
+use std::{
+    collections::HashMap,
+    error::Error,
+    net::{Ipv4Addr, SocketAddr},
+    sync::Arc,
+    time::Duration,
+};
 
 use anyhow::anyhow;
 use async_trait::async_trait;
@@ -9,7 +15,8 @@ use auth_for_warp::{
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
-use tokio::sync::Mutex;
+use tokio::{net::TcpListener, sync::Mutex};
+use tokio_stream::wrappers::TcpListenerStream;
 use warp::{path, Filter};
 
 struct TestDB {
@@ -49,7 +56,7 @@ impl UserDatabase for TestDB {
     }
 }
 
-async fn start_server() {
+async fn start_server() -> Result<SocketAddr, anyhow::Error> {
     let database_connection = Arc::new(Mutex::new(TestDB {
         storage: HashMap::new(),
     }));
@@ -78,9 +85,13 @@ async fn start_server() {
         .or(auth_routes)
         .recover(handle_auth_errors);
 
-    warp::serve(all_routes)
-        .run("127.0.0.1:4123".parse::<SocketAddr>().unwrap())
-        .await;
+    let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await?;
+
+    let local_addr = listener.local_addr()?;
+
+    tokio::spawn(warp::serve(all_routes).run_incoming(TcpListenerStream::new(listener)));
+
+    Ok(local_addr)
 }
 
 #[derive(Deserialize)]
@@ -90,13 +101,13 @@ struct LoginResponse {
 
 #[tokio::test]
 async fn integration() {
-    let _server = tokio::spawn(start_server());
+    let server_port = start_server().await.unwrap().port();
 
     let client = reqwest::Client::new();
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/users/register")
+            .post(format!("http://127.0.0.1:{server_port}/users/register"))
             .body(json!({"username": "Sam I Am", "password": "foobar"}).to_string())
             .send()
             .await
@@ -108,7 +119,7 @@ async fn integration() {
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/users/register")
+            .post(format!("http://127.0.0.1:{server_port}/users/register"))
             .body(json!({"username": "Sam I Am", "password": "fizzbuzz"}).to_string())
             .send()
             .await
@@ -120,7 +131,7 @@ async fn integration() {
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/users/login")
+            .post(format!("http://127.0.0.1:{server_port}/users/login"))
             .body(json!({"username": "Sam I Am", "password": "hunter1"}).to_string())
             .send()
             .await
@@ -131,7 +142,7 @@ async fn integration() {
     );
 
     let login_response = client
-        .post("http://127.0.0.1:4123/users/login")
+        .post(format!("http://127.0.0.1:{server_port}/users/login"))
         .body(json!({"username": "Sam I Am", "password": "foobar"}).to_string())
         .send()
         .await
@@ -147,7 +158,7 @@ async fn integration() {
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/insecure")
+            .post(format!("http://127.0.0.1:{server_port}/insecure"))
             .send()
             .await
             .unwrap()
@@ -158,7 +169,7 @@ async fn integration() {
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/secure")
+            .post(format!("http://127.0.0.1:{server_port}/secure"))
             .bearer_auth("fake token")
             .send()
             .await
@@ -170,7 +181,7 @@ async fn integration() {
 
     assert_eq!(
         client
-            .post("http://127.0.0.1:4123/secure")
+            .post(format!("http://127.0.0.1:{server_port}/secure"))
             .bearer_auth(auth_token)
             .send()
             .await
